@@ -9,36 +9,24 @@ def read(*paths):
     with open(os.path.join(*paths), 'r') as filename:
         return filename.read()
 
-def get_requirements():
-    path = os.path.join(os.path.dirname(__file__), 'requirements.txt')
-    requirements = [l.strip() for l in open(path)]
-    try:
-        import argparse# pylint: disable=unused-variable
-    except ImportError:
-        requirements.append('argparse')
-    return requirements
-
 setup(
     name="slack-cli",
-    version="0.2.0",
-    description="Interact with Slack from the command line",
+    version="2.0.3",
+    description="Slack CLI for productive developers",
     long_description=(read('README.rst')),
     url="https://github.com/regisb/slack-cli",
     install_requires=[
-        "slacker==0.9.9",
-        "websocket-client==0.35.0"
+        "appdirs<1.5",
+        "slacker<0.10.0",
+        "websocket-client<0.40.0",
     ],
     license='MIT',
     author="Régis Behmo",
     author_email="nospam@behmo.com",
-    packages=['slack_cli'],
+    packages=['slackcli'],
     entry_points={
         'console_scripts': [
-            'slack-pipe=slack_cli.pipe:main',
-            'slack-run=slack_cli.run:main',
-            'slack-send=slack_cli.send:main',
-            'slack-stream=slack_cli.stream:main',
-            'slack-upload=slack_cli.upload:main',
+            'slack-cli=slackcli.cli:main',
         ],
     },
     classifiers=[
@@ -46,5 +34,6 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ]
 )
