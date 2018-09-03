@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import select
 
 from . import errors
 from . import slack
@@ -35,6 +36,7 @@ def run():
                                help="Receive messages from a Slack channel, group or username")
     group_receive.add_argument("-l", "--last", type=int,
                                help="Print the last N messages")
+    group_send.add_argument("--save-cache", action="store_true", help="Create source id cache")
 
     args = utils.parse_args(parser)
 
@@ -44,6 +46,11 @@ def run():
         sys.stderr.write(error_message)
         parser.print_help()
         return 1
+
+    # Save cache file
+    if args.save_cache:
+        save_cache()
+        return 0
 
     # Stream content
     if args.src and args.last is None:
@@ -75,6 +82,8 @@ def run():
 
 # pylint: disable=too-many-return-statements
 def args_error_message(args):
+    if args.save_cache and (not args.dst and not args.src):
+        return None
     if args.dst and args.src:
         return "Incompatible arguments: --src and --dst\n"
     if not args.dst and not args.src:
@@ -98,10 +107,19 @@ def last_messages(sources, count):
 
 def pipe(destination, pre=False):
     destination_id = utils.get_source_id(destination)
-    for line in sys.stdin:
-        line = line.strip()
-        if line:
-            slack.post_message(destination_id, line, pre=pre)
+    if sys.stdin.isatty():
+        for line in sys.stdin:
+            line = line.strip()
+            if line:
+                slack.post_message(destination_id, line, pre=pre)
+    else:
+        lines = []
+        while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+            line = sys.stdin.readline()
+            if not line: break
+            lines.append(line)
+        if len(lines) > 0:
+            slack.post_message(destination_id, ''.join(lines), pre=pre)
 
 def run_command(destination, command):
     destination_id = utils.get_source_id(destination)
@@ -116,3 +134,6 @@ def send_message(destination, message, pre=False):
 def upload_file(destination, path):
     destination_id = utils.get_source_id(destination)
     utils.upload_file(path, destination_id)
+
+def save_cache():
+    utils.cache_source_ids()

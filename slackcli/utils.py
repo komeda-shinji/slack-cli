@@ -1,6 +1,12 @@
 from __future__ import unicode_literals
 import argparse
 from datetime import datetime
+import appdirs
+import json
+import os
+import stat
+
+LISTS_PATH = os.path.join(appdirs.user_config_dir("slack-cli"), "id-cache.json")
 
 from . import errors
 from . import names
@@ -45,6 +51,21 @@ def get_sources(source_names):
             obj for obj in objects if len(source_names) == 0 or obj['name'] in source_names
         ]
 
+    def load_lists():
+        lists = []
+        if os.path.exists(LISTS_PATH):
+            with open(LISTS_PATH) as lists_file:
+                lists = json.load(lists_file)
+        return lists
+
+    sources = []
+    lists = load_lists()
+    sources += filter_objects(lists['channels'])
+    sources += filter_objects(lists['groups'])
+    sources += filter_objects(lists['members'])
+    if len(sources) > 0:
+        return sources
+
     sources = []
     sources += filter_objects(slack.client().channels.list().body['channels'])
     sources += filter_objects(slack.client().groups.list().body['groups'])
@@ -80,3 +101,20 @@ def format_message(source_name, message):
         source_name, time.strftime("%Y-%m-%d %H:%M:%S"),
         username, message['text']
     )
+
+def cache_source_ids():
+    lists = {}
+    client = slack.client()
+    lists['channels'] = []
+    for obj in client.channels.list().body['channels']:
+        lists['channels'].append({'id': obj['id'], 'name': obj['name']})
+    lists['groups'] = []
+    for obj in client.groups.list().body['groups']:
+        lists['groups'].append({'id': obj['id'], 'name': obj['name']})
+    lists['members'] = []
+    for obj in client.users.list().body['members']:
+        lists['members'].append({'id': obj['id'], 'name': obj['name']})
+
+    with open(LISTS_PATH, 'w') as lists_file:
+        json.dump(lists, lists_file, sort_keys=True, indent=4)
+    os.chmod(LISTS_PATH, stat.S_IREAD | stat.S_IWRITE)
