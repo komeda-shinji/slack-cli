@@ -113,7 +113,7 @@ def cache_source_ids():
         lists['groups'].append({'id': obj['id'], 'name': obj['name']})
     lists['members'] = []
     for obj in client.users.list().body['members']:
-        lists['members'].append({'id': obj['id'], 'name': obj['name']})
+        lists['members'].append({'id': obj['id'], 'name': obj['name'], 'display_name': obj['profile']['display_name']})
 
     with open(LISTS_PATH, 'w') as lists_file:
         json.dump(lists, lists_file, sort_keys=True, indent=4)
